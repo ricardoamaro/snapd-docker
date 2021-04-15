@@ -9,7 +9,7 @@ set -e
 
 CONTNAME=snappy
 IMGNAME=snapd
-RELEASE=18.04
+RELEASE=20.04
 
 SUDO=""
 if [ -z "$(id -Gn|grep docker)" ] && [ "$(id -u)" != "0" ]; then
@@ -88,7 +88,7 @@ ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 RUN apt-get update &&\
  DEBIAN_FRONTEND=noninteractive\
- apt-get install -y fuse snapd snap-confine squashfuse sudo init &&\
+ apt-get install -y fuse snapd snap-confine squashfuse iptables sudo init &&\
  apt-get clean &&\
  dpkg-divert --local --rename --add /sbin/udevadm &&\
  ln -s /bin/true /sbin/udevadm
@@ -102,18 +102,19 @@ fi
 
 # start the detached container
 $SUDO docker run \
-    --name=$CONTNAME \
-    -ti \
-    --tmpfs /run \
-    --tmpfs /run/lock \
-    --tmpfs /tmp \
-    --cap-add SYS_ADMIN \
-    --device=/dev/fuse \
-    --security-opt apparmor:unconfined \
-    --security-opt seccomp:unconfined \
-    -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
-    -v /lib/modules:/lib/modules:ro \
-    -d $IMGNAME || clean_up
+  --cap-add=NET_ADMIN \
+  --name=$CONTNAME \
+  -ti \
+  --tmpfs /run \
+  --tmpfs /run/lock \
+  --tmpfs /tmp \
+  --cap-add SYS_ADMIN \
+  --device=/dev/fuse \
+  --security-opt apparmor:unconfined \
+  --security-opt seccomp:unconfined \
+  -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+  -v /lib/modules:/lib/modules:ro \
+  -d $IMGNAME || clean_up
 
 # wait for snapd to start
 TIMEOUT=100
